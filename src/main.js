@@ -1,12 +1,13 @@
 #!/usr/bin/env gjs
 
 const { Gtk, Adw, Gio, Gdk, GLib } = imports.gi;
+const { spawn_command_line_sync } = GLib;
 
 class TerminalWindow extends Adw.ApplicationWindow {
     _init(app, shaderEffect, fontConfig) {
         super._init({
             application: app,
-            title: 'Terminal with Shader Effects',
+            title: 'term-retro-cool',
             default_width: 800,
             default_height: 600,
         });
@@ -56,7 +57,7 @@ class TerminalWindow extends Adw.ApplicationWindow {
 class TerminalApp extends Adw.Application {
     _init() {
         super._init({
-            application_id: 'com.example.TerminalApp',
+            application_id: 'com.example.term-retro-cool',
             flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         });
 
@@ -66,9 +67,9 @@ class TerminalApp extends Adw.Application {
 
     _onCommandLine(app, commandLine) {
         let options = commandLine.get_options_dict();
-        let shaderEffect = options.lookup_value('shader', null).get_string();
-        let fontFamily = options.lookup_value('font-family', null).get_string();
-        let fontSize = options.lookup_value('font-size', null).get_int32();
+        let shaderEffect = options.lookup_value('shader', null)?.get_string();
+        let fontFamily = options.lookup_value('font-family', null)?.get_string();
+        let fontSize = options.lookup_value('font-size', null)?.get_int32();
 
         this.shaderEffect = shaderEffect || `
             #version 330 core
@@ -96,8 +97,24 @@ class TerminalApp extends Adw.Application {
     }
 }
 
+function listAvailableFonts() {
+    let [ok, out] = spawn_command_line_sync('fc-list :family');
+    if (ok) {
+        let fonts = out.toString().split('\n').map(line => line.split(':')[0]).filter((value, index, self) => self.indexOf(value) === index);
+        return fonts;
+    }
+    return [];
+}
+
 let app = new TerminalApp();
 app.add_main_option('shader', 's', GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Shader effect to use', null);
 app.add_main_option('font-family', 'f', GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Font family to use', null);
 app.add_main_option('font-size', 'z', GLib.OptionFlags.NONE, GLib.OptionArg.INT, 'Font size to use', null);
+
+let availableFonts = listAvailableFonts();
+if (availableFonts.length > 0) {
+    console.log('Available fonts:');
+    availableFonts.forEach(font => console.log(font));
+}
+
 app.run([]);
