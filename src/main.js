@@ -74,13 +74,51 @@ class TerminalApp extends Adw.Application {
             let options = commandLine.get_options_dict();
             let shaderPath = options.lookup_value('shader', null)?.get_string();
             let fontFamily = options.lookup_value('font-family', null)?.get_string();
-        } catch (error) {
-            logError(error);
+            let fontSize = options.lookup_value('font-size', null)?.get_int32();
+
+            let shaderEffect = `
+                #version 330 core
+                in vec2 v_texcoord;
+                out vec4 fragColor;
+                uniform sampler2D tex;
+                uniform float time;
+                void main() {
+                    vec4 color = texture(tex, v_texcoord);
+                    fragColor = vec4(color.rgb * vec3(0.5 + 0.5 * sin(time), 1.0, 0.5), color.a);
+                }
+            `;
+
+            if (shaderPath) {
+                try {
+                    let [success, shaderContent] = GLib.file_get_contents(shaderPath);
+                    if (success) {
+                        shaderEffect = shaderContent.toString();
+                    }
+                } catch (e) {
+                    logError(e, `Failed to load shader from ${shaderPath}`);
+                }
+            }
+
+            this.shaderEffect = shaderEffect;
+            this.fontConfig = {
+                family: fontFamily || 'Monospace',
+                size: fontSize || 12,
+            };
+
+            app.activate();
+        } catch (e) {
+            logError(e, 'Error handling command line options');
         }
+        return 0;
     }
 
     _onActivate() {
-        // Activation logic here
+        try {
+            let win = new TerminalWindow(this, this.shaderEffect, this.fontConfig);
+            win.present();
+        } catch (e) {
+            logError(e, 'Error activating application');
+        }
     }
 });
 
