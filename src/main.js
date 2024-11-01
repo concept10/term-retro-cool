@@ -1,9 +1,10 @@
 #!/usr/bin/env gjs
-
-imports.gi.versions.Gtk = '4.0';
-imports.gi.versions.Adw = '1';
-
-const { Gtk, Adw, Gio, Gdk, GLib, GObject } = imports.gi;
+import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
+import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk';
 
 const TerminalWindow = GObject.registerClass(
 class TerminalWindow extends Adw.ApplicationWindow {
