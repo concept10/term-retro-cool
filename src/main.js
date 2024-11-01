@@ -1,7 +1,9 @@
 #!/usr/bin/env gjs
 
+imports.gi.versions.Gtk = '4.0';
+imports.gi.versions.Adw = '1';
+
 const { Gtk, Adw, Gio, Gdk, GLib } = imports.gi;
-const { spawn_command_line_sync } = GLib;
 
 class TerminalWindow extends Adw.ApplicationWindow {
     _init(app, shaderEffect, fontConfig) {
@@ -67,11 +69,11 @@ class TerminalApp extends Adw.Application {
 
     _onCommandLine(app, commandLine) {
         let options = commandLine.get_options_dict();
-        let shaderEffect = options.lookup_value('shader', null)?.get_string();
+        let shaderPath = options.lookup_value('shader', null)?.get_string();
         let fontFamily = options.lookup_value('font-family', null)?.get_string();
         let fontSize = options.lookup_value('font-size', null)?.get_int32();
 
-        this.shaderEffect = shaderEffect || `
+        let shaderEffect = `
             #version 330 core
             in vec2 v_texcoord;
             out vec4 fragColor;
@@ -82,6 +84,19 @@ class TerminalApp extends Adw.Application {
                 fragColor = vec4(color.rgb * vec3(0.5 + 0.5 * sin(time), 1.0, 0.5), color.a);
             }
         `;
+
+        if (shaderPath) {
+            try {
+                let [success, shaderContent] = GLib.file_get_contents(shaderPath);
+                if (success) {
+                    shaderEffect = shaderContent.toString();
+                }
+            } catch (e) {
+                logError(e, `Failed to load shader from ${shaderPath}`);
+            }
+        }
+
+        this.shaderEffect = shaderEffect;
         this.fontConfig = {
             family: fontFamily || 'Monospace',
             size: fontSize || 12,
@@ -107,7 +122,7 @@ function listAvailableFonts() {
 }
 
 let app = new TerminalApp();
-app.add_main_option('shader', 's', GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Shader effect to use', null);
+app.add_main_option('shader', 's', GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Path to shader file to use', null);
 app.add_main_option('font-family', 'f', GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Font family to use', null);
 app.add_main_option('font-size', 'z', GLib.OptionFlags.NONE, GLib.OptionArg.INT, 'Font size to use', null);
 
